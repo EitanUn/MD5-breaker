@@ -21,7 +21,8 @@ def handle_connection(client_socket, client_address, digits, hashed):
     current, amount = 0, 0
     try:
         print('New connection received from ' + client_address[0] + ':' + str(client_address[1]))
-        client_socket.send(protocol_encode((digits, hashed)))
+        client_socket.send(protocol_encode(digits))
+        client_socket.send(protocol_encode(hashed))
         while ANSWER == "":
             amount = protocol_recv(client_socket)
             lock.acquire()
@@ -45,16 +46,14 @@ def handle_connection(client_socket, client_address, digits, hashed):
                 ANSWER = data[1:]
                 return
             while data != amount * DATA_PER_CORE:
-                protocol_recv(client_socket)
-                client_socket.send(protocol_encode(current))
-                data = protocol_recv(client_socket)
-                if data.startswith("a"):
-                    ANSWER = data[1:]
-                    client_socket.close()
-                    return
+                LOST_LIST.append((current, amount))
         client_socket.send(protocol_encode("found"))
     except socket.error as err:
         print('received socket exception - ' + str(err))
+        if amount != 0:
+            LOST_LIST.append((current, amount))
+    except ValueError as err:
+        print('socket unexpectedly closed')
         if amount != 0:
             LOST_LIST.append((current, amount))
     finally:
@@ -62,11 +61,12 @@ def handle_connection(client_socket, client_address, digits, hashed):
 
 
 def protocol_recv(client_socket):
-    return "1"
+    length = client_socket.recv(MSG_LEN).decode()
+    return client_socket.recv(length).decode()
 
 
 def protocol_encode(data):
-    return 1
+    return (str(len(data)).zfill(MSG_LEN) + str(data)).encode()
 
 
 def main():
@@ -81,11 +81,12 @@ def main():
         print("Listening for connections on port %d" % PORT)
 
         while ANSWER == "":
-            rlist, wlist, xlist = select.select()
-            client_socket, client_address = server_socket.accept()
-            thread = Thread(target=handle_connection,
-                            args=(client_socket, client_address, digits, hashed))
-            thread.start()
+            rlist, wlist, xlist = select.select([server_socket], [], [])
+            for i in rlist:
+                client_socket, client_address = server_socket.accept()
+                thread = Thread(target=handle_connection,
+                                args=(client_socket, client_address, digits, hashed))
+                thread.start()
     except socket.error as err:
         print('received socket exception - ' + str(err))
     finally:
