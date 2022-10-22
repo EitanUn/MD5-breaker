@@ -24,7 +24,7 @@ def handle_connection(client_socket, client_address, digits, hashed):
         client_socket.send(protocol_encode(digits))
         client_socket.send(protocol_encode(hashed))
         while ANSWER == "":
-            amount = protocol_recv(client_socket)
+            amount = int(protocol_recv(client_socket))
             lock.acquire()
             if CURRENT_NUM < 10**digits:
                 current = CURRENT_NUM
@@ -62,17 +62,18 @@ def handle_connection(client_socket, client_address, digits, hashed):
 
 def protocol_recv(client_socket):
     length = client_socket.recv(MSG_LEN).decode()
-    return client_socket.recv(length).decode()
+    if length == '':
+        return length
+    return client_socket.recv(int(length)).decode()
 
 
 def protocol_encode(data):
-    return (str(len(data)).zfill(MSG_LEN) + str(data)).encode()
+    return (str(len(str(data))).zfill(MSG_LEN) + str(data)).encode()
 
 
 def main():
     # Open a socket and loop forever while waiting for clients
-    counter = 0
-    digits = input("enter number of digits in original code")
+    digits = int(input("enter number of digits in original code"))
     hashed = input("enter hashed code")
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -81,14 +82,18 @@ def main():
         print("Listening for connections on port %d" % PORT)
 
         while ANSWER == "":
-            rlist, wlist, xlist = select.select([server_socket], [], [])
+            rlist, wlist, xlist = select.select([server_socket], [], [], 0.1)
             for i in rlist:
                 client_socket, client_address = server_socket.accept()
                 thread = Thread(target=handle_connection,
                                 args=(client_socket, client_address, digits, hashed))
                 thread.start()
+        print("Hash decoded! Answer is " + ANSWER)
     except socket.error as err:
         print('received socket exception - ' + str(err))
     finally:
         server_socket.close()
 
+
+if __name__ == '__main__':
+    main()
