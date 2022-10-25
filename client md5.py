@@ -3,9 +3,9 @@ import hashlib
 from threading import Thread, Lock
 from os import cpu_count
 
-IP = '127.0.0.1'
+IP = '172.16.6.128'
 PORT = 3000
-DATA_PER_CORE = 1000
+DATA_PER_CORE = 100000
 MSG_LEN = 2
 ANSWER = ""
 CHECKED = 0
@@ -32,25 +32,33 @@ def brute_force(start, length, digits, hashed):
         if hashlib.md5(str(i).zfill(digits).encode()).hexdigest().upper() == hashed.upper():
             ANSWER = str(i).zfill(digits)
     lock.acquire()
-    CHECKED += 1000
+    CHECKED += DATA_PER_CORE
     lock.release()
 
 
 def main():
+    global ANSWER
+    global CHECKED
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         my_socket.connect((IP, PORT))
-        digits = int(protocol_recv(my_socket))
+        digits = protocol_recv(my_socket)
+        if digits == "found":
+            ANSWER = "found"
         hashed = protocol_recv(my_socket)
+        if hashed == "found":
+            ANSWER = "found"
         while not ANSWER:
             threads = []
+            CHECKED = 0
             my_socket.send(protocol_encode(str(cpu_count())))
-            start = int(protocol_recv(my_socket))
+            start = protocol_recv(my_socket)
             if start == "found":
                 break
+            start = int(start)
             for i in range(int(cpu_count())):
                 thread = Thread(target=brute_force,
-                                args=(start, DATA_PER_CORE, digits, hashed))
+                                args=(int(start), DATA_PER_CORE, int(digits), hashed))
                 threads.append(thread)
                 thread.start()
                 start += DATA_PER_CORE
