@@ -1,3 +1,8 @@
+"""
+Author: Eitan Unger
+Date: 2/11/22
+Client for dynamic distributed md5 hash breaker
+"""
 import socket
 import hashlib
 from threading import Thread, Lock
@@ -13,6 +18,11 @@ lock = Lock()
 
 
 def protocol_recv(client_socket):
+    """
+    protocol receive function, receives length and then receives the rest of the message accordingly
+    :param client_socket: socket to receive from
+    :return: received message
+    """
     length = client_socket.recv(MSG_LEN).decode()
     if length == '':
         return length
@@ -20,10 +30,23 @@ def protocol_recv(client_socket):
 
 
 def protocol_encode(data):
+    """
+    protocol encode function, encodes the message with a length header added
+    :param data: message to encode
+    :return: encoded message
+    """
     return (str(len(str(data))).zfill(MSG_LEN) + str(data)).encode()
 
 
 def brute_force(start, length, digits, hashed):
+    """
+    md5 brute force function, tries length numbers from start and returns whether one of them is the seed for
+    the hash received.
+    :param start: number to start checking from
+    :param length: amount of numbers to check
+    :param digits: number of digits in original number (zfill to avoid duplicates)
+    :param hashed: hash to find
+    """
     global ANSWER
     global CHECKED
     for i in range(start, start + length):
@@ -37,6 +60,9 @@ def brute_force(start, length, digits, hashed):
 
 
 def main():
+    """
+    main function for server interactions and starting and managing threads
+    """
     global ANSWER
     global CHECKED
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

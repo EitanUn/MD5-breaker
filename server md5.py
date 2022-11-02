@@ -1,3 +1,8 @@
+"""
+Author: Eitan Unger
+Date: 2/11/22
+Server for dynamic distributed md5 hash breaker
+"""
 import socket
 from threading import Thread, Lock
 import select
@@ -14,6 +19,13 @@ lock = Lock()
 
 
 def handle_connection(client_socket, client_address, digits, hashed):
+    """
+    Function to handle a single client
+    :param client_socket: client socket
+    :param client_address: client's address
+    :param digits: digits in original number
+    :param hashed: hash to break
+    """
     global lock
     global CURRENT_NUM
     global ANSWER
@@ -66,6 +78,11 @@ def handle_connection(client_socket, client_address, digits, hashed):
 
 
 def protocol_recv(client_socket):
+    """
+    protocol receive function, receives length and then receives the rest of the message accordingly
+    :param client_socket: socket to receive from
+    :return: received message
+    """
     length = client_socket.recv(MSG_LEN).decode()
     if length == '':
         return length
@@ -73,10 +90,18 @@ def protocol_recv(client_socket):
 
 
 def protocol_encode(data):
+    """
+    protocol encode function, encodes the message with a length header added
+    :param data: message to encode
+    :return: encoded message
+    """
     return (str(len(str(data))).zfill(MSG_LEN) + str(data)).encode()
 
 
 def main():
+    """
+    Function to manage the server's socket and client threads
+    """
     # Open a socket and loop forever while waiting for clients
     digits = int(input("enter number of digits in original code"))
     hashed = input("enter hashed code")

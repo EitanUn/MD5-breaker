@@ -1,3 +1,8 @@
+"""
+Author: Eitan Unger
+Date: 2/11/22
+Test for hashlib and md5 hash breaking
+"""
 import hashlib
 
 
