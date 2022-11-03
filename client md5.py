@@ -102,4 +102,6 @@ def main():
 
 
 if __name__ == '__main__':
+    assert protocol_encode("1234") == b'041234'
+    assert protocol_encode(1234) == b'041234'
     main()

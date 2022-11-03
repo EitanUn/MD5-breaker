@@ -105,6 +105,9 @@ def main():
     # Open a socket and loop forever while waiting for clients
     digits = int(input("enter number of digits in original code"))
     hashed = input("enter hashed code")
+    while len(hashed) != 32:
+        print("Hash incorrect! illegal length")
+        hashed = input("enter hashed code")
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     threads = []
     try:
@@ -130,4 +133,6 @@ def main():
 
 
 if __name__ == '__main__':
+    assert protocol_encode("1234") == b'041234'
+    assert protocol_encode(1234) == b'041234'
     main()
