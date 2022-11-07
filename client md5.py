@@ -6,8 +6,10 @@ Client for dynamic distributed md5 hash breaker
 import socket
 import hashlib
 from threading import Thread, Lock
-from os import cpu_count
+from os import cpu_count, path, mkdir
+import logging
 
+LOG_FILE = "logs/client.log"
 IP = '172.16.6.128'
 PORT = 3000
 DATA_PER_CORE = 100000
@@ -68,40 +70,54 @@ def main():
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         my_socket.connect((IP, PORT))
+        logging.debug("Connecting to %s" % IP)
         digits = protocol_recv(my_socket)
         if digits == "found":
-            ANSWER = "found"
+            logging.debug("Answer was found by server, exiting")
+            return
         hashed = protocol_recv(my_socket)
         if hashed == "found":
-            ANSWER = "found"
+            logging.debug("Answer was found by server, exiting")
+            return
+        logging.info("Received hash is of length %s and is %s" % (digits, hashed))
         while not ANSWER:
             threads = []
             CHECKED = 0
             my_socket.send(protocol_encode(str(cpu_count())))
+            logging.info("Sent client has %d cores" % cpu_count())
             start = protocol_recv(my_socket)
             if start == "found":
-                break
+                logging.debug("Answer was found by server, exiting")
+                return
             start = int(start)
             for i in range(int(cpu_count())):
+                logging.info("Starting thread checking %d to %d" % (start, start+DATA_PER_CORE-1))
                 thread = Thread(target=brute_force,
                                 args=(int(start), DATA_PER_CORE, int(digits), hashed))
                 threads.append(thread)
                 thread.start()
                 start += DATA_PER_CORE
+            logging.info("Joining threads")
             for i in threads:
                 i.join()
             if ANSWER:
+                logging.info("Found answer! It is " + ANSWER)
                 data = "a" + ANSWER
             else:
                 data = CHECKED
             my_socket.send(protocol_encode(data))
+        logging.info("Answer was found, exiting")
     except socket.error as err:
+        logging.info("Encountered socket error: " + err)
         print("Cannot connect to server: " + str(err))
     finally:
         my_socket.close()
 
 
 if __name__ == '__main__':
+    if not path.exists("logs"):
+        mkdir("logs")
+    logging.basicConfig(filename=LOG_FILE, encoding="utf-8", level=logging.DEBUG)
     assert protocol_encode("1234") == b'041234'
     assert protocol_encode(1234) == b'041234'
     main()
